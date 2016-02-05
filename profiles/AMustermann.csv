@@ -1,0 +1,11 @@
+# Profile: André Müstermann
+# ORCID: 1234567890
+#
+# type: E = education, P = postdoc, A = permanent, T = talk/short, S = sabbatical/long-term visit/Erasmus/...
+# Year in, year out, short name, long, lat
+2004,2010,E,EPFL,, 
+2007,2008,S,KTH,, 
+2011,2015,E,ANU,,
+2013,2013,T,KAU,,  
+2015,2018,P,ESO_SC,, 
+# End of the World as we know it
