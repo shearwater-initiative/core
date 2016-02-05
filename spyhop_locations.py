@@ -27,6 +27,8 @@
 # locations Europe
 locations_EU = { 'EPFL':[r'Ecole Polytechnique F\'ed\'erale de Lausanne',
                          6.566886, 46.519144, 'CH'],
+                 'IAA': [r'Instituto de Astrofisica de Andalucia',
+                         -3.590235, 37.161778,'E'],        
                  'KTH': [r'Kunglia Techniska H\"ogskolan',
                          18.070450, 59.349828,'S'],        
                  'MPIA':[r'Max-Planck-Instit\"ut for Astronomie',
@@ -37,9 +39,11 @@ locations_NA = { 'JHU' :[r' Johns Hopkins University',
                          -76.620443, 39.329030, 'USA'],
                  'NASA GSFC':[r'NASA Godard Space Flight Center',
                               -76.851511, 38.996103, 'USA'],
+                 'NAOJ HI':[r'Subaru Telescope',
+                            -155.090320,19.702562,'USA' ]
                }
 # locations South America               
-locations_SA = { 'ESO_SC':[r'European Southern Observatory (Chile)',
+locations_SA = { 'ESO SC':[r'European Southern Observatory (Chile)',
                            -70.599774, -33.399524, 'CL'],
                }
 # locations in Asia               

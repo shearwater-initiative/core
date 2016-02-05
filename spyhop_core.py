@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 #
+# TODO:
+# - find a workaround to draw the great circles properly when the map is centered
+#   on something else than 0 ...
+# - refine the connection rules between long-term spot and short term ones (e.g.
+#   when the trasnition between two fixed spot is a short term visit)
+# - add some statistics to the plot: countries visited, continents visited, 
+#   total km migrated, etc ...
+#
+#
 # If you find this code useful, please cite the corresponding paper
 #
 # Mapping the great migrations of astronomers with the Spyhop Initiative,
@@ -126,12 +135,13 @@ def show_locations(continent = 'all'):
 # ------------------------------------------------------------------------------
 
 # Plot the locations in the database
-def get_profile(fn):
+def get_profile(fn, long_min):
     '''
     Reads in a profile, and sorts the information according to the Spyhop rules.
    
     :param: fn: {string} 
                 The filename (+path!) to the profile to load.
+    :param: long_min: the "cut" of the map
                 
     :returns: []                    
     '''  
@@ -139,7 +149,6 @@ def get_profile(fn):
     # Create some varables for the trajectory:
     
     trajectory = []
-    sidetrack = []
     talks = []
     
     
@@ -158,20 +167,18 @@ def get_profile(fn):
         if len(items) != 6:
             sys.exit('Badly formatted profile step: %s' % line)
         
-        if items[2] in ['E','P','A']:
+        if items[2] in ['E','P','A','S']:
             trajectory.append(items)
-        elif items[2] in ['S']:
-            sidetrack.append(items)
         elif items[2] in ['T']:
             talks.append(items)
         else:
             sys.exit('Position type unknown: %s' % items[2])    
     
     trajectory.sort()
-    sidetrack.sort()
     talks.sort()
 
     # Alright, now, turn this data into something we can plot
+    # Main trajectory
     trajectory_coords = np.zeros((len(trajectory),2))
     for (i,loc) in enumerate(trajectory):
         if loc[3] in known_locations.keys():
@@ -179,23 +186,15 @@ def get_profile(fn):
             trajectory_coords[i,1] = np.float(known_locations[loc[3]][2])
     
         else:
-            print ' Use custom locations from file - not yet implemented'
-     
-                                        
-    sidetrack_coords = np.zeros((len(sidetrack)*2,2))
-    for (i,loc) in enumerate(sidetrack):
-        st_year = np.int(loc[0])
-        # Find where one was before the side track
-
-        for (i,main_loc) in enumerate(trajectory[:-1]):
-            if (np.int(main_loc[0])<= st_year) and (np.int(trajectory[i+1][0])>=st_year):
-                sidetrack_coords[2*i,0] = trajectory_coords[i,0]
-                sidetrack_coords[2*i,1] = trajectory_coords[i,1]
-                sidetrack_coords[2*i+1,0] = np.float(known_locations[loc[3]][1])
-                sidetrack_coords[2*i+1,1] = np.float(known_locations[loc[3]][2])
-                
-        # And then find where one was after the side track as well ?
+            trajectory_coords[i,0] = np.float(loc[4])                                                                    
+            trajectory_coords[i,1] = np.float(loc[5])        
     
+    # Make sure it all falls on the map
+    for i in range(len(trajectory_coords)):
+        if trajectory_coords[i,0] < long_min:
+                trajectory_coords[i,0] += 360.        
+    
+    # Talks and other visits
     talks_coords = np.zeros((len(talks),2))
     for (i,loc) in enumerate(talks):
         if loc[3] in known_locations.keys():
@@ -203,16 +202,58 @@ def get_profile(fn):
             talks_coords[i,1] = np.float(known_locations[loc[3]][2])
     
         else:
-            print ' Use custom locations from file - not yet implemented'                                                                      
-                                                                                                              
-                                                                                                                                                 
-                                                                                                                                                                                                                       
-    return [trajectory, sidetrack, talks, trajectory_coords, sidetrack_coords,
-            talks_coords]                                                                                                            
+            talks_coords[i,0] = np.float(loc[4])                                                                      
+            talks_coords[i,1] = np.float(loc[5]) 
+            
+    # make sure it all falls on the map        
+    for i in range(len(talks_coords)):
+        if talks_coords[i,0] < long_min:
+            
+                talks_coords[i,0] += 360.                                                                                                                                                                                                                                                        
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+    return [trajectory, talks, trajectory_coords, talks_coords]                                                                                                            
+# ------------------------------------------------------------------------------
+def drawgreatcircle_custom(m, long1,lat1,long2,lat2, **kwargs):
+    '''
+    A function that draws a great circle, and looks good if it crosses the edge
+    of the map.
+    
+    :param m: the Basemap instance
+    :param long1: the longitude of the starting point
+    :param lat1: the latitude of the starting point
+    :param long2: the longitude of the final point
+    :param lat2: the latitude of the final point
+    '''
+    
+    gc = m.drawgreatcircle(long1, lat1, long2, lat2,
+                          **kwargs)
+                          
+    # In case we cross the map edge, let's make it look a bit prettier.
+    # This is supposed to be fixed in Basemap 1.8
+    # See http://stackoverflow.com/questions/13888566/python-basemap-drawgreatcircle-function
+    this_path = gc[0].get_path()
+        
+    # find the index which crosses the dateline (the delta is large)
+    cut_point = np.where(np.abs(np.diff(this_path.vertices[:, 0])) > 
+                         np.abs(10*np.median(np.diff(this_path.vertices[:,0]))))[0]
+
+    if len(cut_point>0):
+        cut_point = cut_point[0]
+        # create new vertices with a nan inbetween and set those as 
+        # the path's vertices
+        new_verts = np.concatenate( [this_path.vertices[:cut_point, :], 
+                                    [[np.nan, np.nan]], 
+                                    this_path.vertices[cut_point+1:, :]]
+                                   )
+        this_path.codes = None
+        this_path.vertices = new_verts
+
 
 # ------------------------------------------------------------------------------
 
-def draw_map(profile_fn, profile_loc = '.', plot_format = 'pdf'):  
+def draw_map(profile_fn, profile_loc = '.', plot_format = 'png',
+             long_mid=0):  
     '''
     Draw the map linked to a specific profile.
    
@@ -221,7 +262,9 @@ def draw_map(profile_fn, profile_loc = '.', plot_format = 'pdf'):
     :param: profile_loc: {string, default='.'}
                          Path to the profile
     :param: plot_fmt: {string, default='pdf'}
-                         Any valid matplotlib format for exporting the figure.                         
+                         Any valid matplotlib format for exporting the figure.
+    :param: long_mid: {float, default=-170}
+                       The mean longitude of the map, i.e. where to "center it"                                              
                 
     :returns: True                    
     '''     
@@ -235,9 +278,13 @@ def draw_map(profile_fn, profile_loc = '.', plot_format = 'pdf'):
 
     ax1 = plt.subplot(gs[0,0])
 
+    long_min = long_mid - 180.
+
     # Then, create a Basemap instance.
-    m = Basemap(llcrnrlon=-180, llcrnrlat=-90, urcrnrlon=180, urcrnrlat=90, 
-            projection='mill', ax = ax1)
+    m = Basemap(llcrnrlon=long_min, llcrnrlat=-90, urcrnrlon=long_min+360.,
+                urcrnrlat=90,
+                #lon_0 = 150,lat_0=0,
+                projection='mill', ax = ax1)
 
     # Update the map to give that 'Spyhop feel' ...
     m.drawcoastlines(linewidth=.8,color='w')
@@ -249,91 +296,61 @@ def draw_map(profile_fn, profile_loc = '.', plot_format = 'pdf'):
                     color='0.8', dashes=[5,5])
     m.drawmeridians(np.linspace(0,360,13),labels=[0,0,0,1], 
                     color='0.8',dashes=[5,5])
-    m.drawmapscale(-7., -50, -7, -50, 5000, barstyle='fancy')
+    m.drawmapscale(long_mid, -80, long_mid, -80, 5000, barstyle='fancy')
     
     
     # Get the data
-    [trajectory, sidetrack, talks, trajectory_coords, sidetrack_coords, 
-     talks_coords] = \
-                    get_profile(os.path.join(profile_loc,profile_fn))
-                    
+    [trajectory, talks, trajectory_coords, talks_coords] = \
+                    get_profile(os.path.join(profile_loc,profile_fn), long_min)                  
+                                                  
     # And now draw the data: 
     # Main path
-    for i in range(len(trajectory)-1):
+    main_track = [loc for loc in trajectory if loc[2] !='S']
+    side_track = [loc for loc in trajectory if loc[2] == 'S']
+    
+    for i in range(len(main_track)-1):
         
-        gc = m.drawgreatcircle(trajectory_coords[i,0],trajectory_coords[i,1],
-                          trajectory_coords[i+1,0],trajectory_coords[i+1,1],
-                          c='k', lw=2)
-                          
-        # In case we cross the map edge, let's make it look a bit prettier.
-        # This is supposed to be fixed in Basemap 1.8
-        # See http://stackoverflow.com/questions/13888566/python-basemap-drawgreatcircle-function
-        this_path = gc[0].get_path()
+        k1 = trajectory.index(main_track[i])
+        k2 = trajectory.index(main_track[i+1])
+       
+        drawgreatcircle_custom(m,
+                               trajectory_coords[k1,0],trajectory_coords[k1,1],
+                               trajectory_coords[k2,0],trajectory_coords[k2,1],
+                               c='k', lw=2, ls = '-')
+                               
+    for i in range(len(side_track)):
         
-        # find the index which crosses the dateline (the delta is large)
-        cut_point = np.where(np.abs(np.diff(this_path.vertices[:, 0])) > 
-                             5*np.median(np.diff(this_path.vertices[:,0])))[0]
-
-        if len(cut_point>0):
-            cut_point = cut_point[0]
-            # create new vertices with a nan inbetween and set those as 
-            # the path's vertices
-            new_verts = np.concatenate( [this_path.vertices[:cut_point, :], 
-                                        [[np.nan, np.nan]], 
-                                        this_path.vertices[cut_point+1:, :]]
-                                       )
-            this_path.codes = None
-            this_path.vertices = new_verts                                   
+        k1 = trajectory.index(side_track[i])
+        st_year0 = np.float(side_track[i][0])
+        
+        
+        for (j,mt) in enumerate(main_track):
+            if (np.float(mt[0])<= st_year0) and (np.float(mt[1])>= st_year0) : 
+            
+                k2 = trajectory.index(main_track[j])
+                                                            
+                drawgreatcircle_custom(m,
+                               trajectory_coords[k1,0],trajectory_coords[k1,1],
+                               trajectory_coords[k2,0],trajectory_coords[k2,1],
+                               c='k', lw=1, ls = '--')    
+                pass                                                                  
                           
-        m.plot(trajectory_coords[i,0],trajectory_coords[i,1],latlon=True, 
+    # Plot the symbols for each location on the track 
+    for i in range(len(trajectory)): 
+        
+        x,y = m(trajectory_coords[i,0],trajectory_coords[i,1])                                                              
+        m.plot(x,y, 
                marker=my_markers[trajectory[i][2]],
                c=my_colors[trajectory[i][2]],
                markersize = 10)
-               
-    # And let us not forget the last point:           
-    m.plot(trajectory_coords[-1,0],trajectory_coords[-1,1],latlon=True, 
-               marker=my_markers[trajectory[-1][2]],
-               c=my_colors[trajectory[-1][2]],
-               markersize = 10)
-    
-    
-    # Side tracks
-    for i in range(len(sidetrack)):
-        gc = m.drawgreatcircle(sidetrack_coords[i*2,0],sidetrack_coords[i*2,1],
-                          sidetrack_coords[i*2+1,0],sidetrack_coords[i*2+1,1],
-                          c='k', lw=2, ls = '--')
-                          
-        # In case we cross the map edge, let's make it look a bit prettier.
-        # This is supposed to be fixed in Basemap 1.8
-        # See http://stackoverflow.com/questions/13888566/python-basemap-drawgreatcircle-function
-        this_path = gc[0].get_path()
-        
-        # find the index which crosses the dateline (the delta is large)
-        cut_point = np.where(np.abs(np.diff(this_path.vertices[:, 0])) > 
-                             5*np.median(np.diff(this_path.vertices[:,0])))[0]
-
-        if len(cut_point>0):
-            cut_point = cut_point[0]
-            # create new vertices with a nan inbetween and set those as 
-            # the path's vertices
-            new_verts = np.concatenate( [this_path.vertices[:cut_point, :], 
-                                        [[np.nan, np.nan]], 
-                                        this_path.vertices[cut_point+1:, :]]
-                                       )
-            this_path.codes = None
-            this_path.vertices = new_verts                                   
-                          
-        m.plot(sidetrack_coords[i*2+1,0],sidetrack_coords[i*2+1,1],latlon=True, 
-               marker=my_markers['S'],
-               c=my_colors['S'],
-               markersize = 10)           
-                                                                     
+                                                                          
     # Talks
-    for i in range(len(talks)):                                              
-        m.plot(talks_coords[i,0],talks_coords[i,1],latlon=True, 
+    for i in range(len(talks)):  
+        x,y = m(talks_coords[i,0],talks_coords[i,1])                                            
+        m.plot(x,y,
                marker=my_markers['T'],
                c=my_colors['T'],
-               markersize = 8)          
+               markersize = 10)          
                
 
     plt.show()

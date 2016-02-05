@@ -33,9 +33,9 @@ my_markers = {'E':'^',
               'T':'*',
               }
               
-my_colors = {'E':'darkorange',
-              'P':'teal',
-              'A':'magenta',
-              'S':'limegreen',
+my_colors = {'E':'orangered',
+              'P':'dodgerblue',
+              'A':'mediumorchid',
+              'S':'greenyellow',
               'T':'gold',
               }

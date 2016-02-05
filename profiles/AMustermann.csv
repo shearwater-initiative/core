@@ -1,11 +1,20 @@
-# Profile: André Müstermann
+# Profile: Frédéric Vogt
 # ORCID: 1234567890
 #
 # type: E = education, P = postdoc, A = permanent, T = talk/short, S = sabbatical/long-term visit/Erasmus/...
 # Year in, year out, short name, long, lat
 2004,2010,E,EPFL,, 
-2007,2008,S,KTH,, 
+2007,2008,S,KTH,,
+2008,2008,S,MPIA,, 
+2009,2010,S,NAOJ HI,, 
+2010,2010,S,MPIA,,  
 2011,2015,E,ANU,,
-2013,2013,T,KAU,,  
-2015,2018,P,ESO_SC,, 
+2013,2014,S,JHU,,
+2014,2014,S,NASA GSFC,, 
+2015,2018,P,ESO SC,,
+# Talks
+2014,2014,T,KAU,, 
+2015,2015,T,Coogee Beach,151.255840,-33.922521 
+2013,2013,T,Lijang,100.222532,26.866039  
+2013,2013,T,IAA,, 
 # End of the World as we know it
