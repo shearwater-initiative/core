@@ -339,6 +339,6 @@ def draw_map(profile_fn, profile_loc = '.', plot_format = 'pdf'):
     plt.show()
     
     # Save the figure
-    plt.savefig(os.path.join(profile_loc,profile_fn[-4]+plot_format),bbox_inches='tight')
+    plt.savefig(os.path.join(profile_loc,profile_fn[:-3]+plot_format),bbox_inches='tight')
     
     return True
